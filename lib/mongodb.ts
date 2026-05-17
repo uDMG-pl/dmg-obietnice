@@ -2,12 +2,9 @@ import "server-only";
 
 import { MongoClient, type Db, type MongoClientOptions } from "mongodb";
 
-const options: MongoClientOptions = {};
+import type { MongoGlobal } from "@/lib/definitions";
 
-type MongoGlobal = typeof globalThis & {
-  __mongoClientPromise?: Promise<MongoClient>;
-  __mongoClientUri?: string;
-};
+const options: MongoClientOptions = {};
 
 const globalForMongo = globalThis as MongoGlobal;
 
