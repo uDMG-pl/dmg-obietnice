@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ZglosForm } from "@/app/_components/zglos-form/zglos-form";
+import { isTurnstileEnabled } from "@/lib/turnstile-config";
 
 export const metadata: Metadata = {
   title: "Zgłoś klip | Lista obietnic",
@@ -33,7 +34,7 @@ export default function ZglosPage() {
           </Link>
         </header>
 
-        <ZglosForm />
+        <ZglosForm turnstileEnabled={isTurnstileEnabled()} />
       </section>
     </main>
   );

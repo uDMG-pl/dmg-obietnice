@@ -9,6 +9,7 @@ import {
   formatRetryAfter,
 } from "@/lib/rate-limit";
 import { getRequestIp } from "@/lib/request-ip";
+import { isTurnstileEnabled } from "@/lib/turnstile-config";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { createZgloszenie } from "@/lib/zgloszenia";
 
@@ -53,23 +54,25 @@ export async function submitZglos(
     };
   }
 
-  const token = formData.get("cf-turnstile-response");
+  if (isTurnstileEnabled()) {
+    const token = formData.get("cf-turnstile-response");
 
-  if (typeof token !== "string" || !token) {
-    return {
-      success: false,
-      message: "Uzupełnij captchę przed wysłaniem.",
-      captchaError: true,
-    };
-  }
+    if (typeof token !== "string" || !token) {
+      return {
+        success: false,
+        message: "Uzupełnij captchę przed wysłaniem.",
+        captchaError: true,
+      };
+    }
 
-  const captchaValid = await verifyTurnstileToken(token);
-  if (!captchaValid) {
-    return {
-      success: false,
-      message: "Captcha jest niepoprawna. Spróbuj jeszcze raz.",
-      captchaError: true,
-    };
+    const captchaValid = await verifyTurnstileToken(token);
+    if (!captchaValid) {
+      return {
+        success: false,
+        message: "Captcha jest niepoprawna. Spróbuj jeszcze raz.",
+        captchaError: true,
+      };
+    }
   }
 
   try {

@@ -1,3 +1,7 @@
+import "server-only";
+
+import { isTurnstileEnabled } from "@/lib/turnstile-config";
+
 const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -13,6 +17,10 @@ type TurnstileVerifyResponse = {
 };
 
 export async function verifyTurnstileToken(token: string): Promise<boolean> {
+  if (!isTurnstileEnabled()) {
+    return true;
+  }
+
   const secret = getTurnstileSecretKey();
 
   const response = await fetch(TURNSTILE_VERIFY_URL, {

@@ -22,7 +22,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ZglosForm() {
+type ZglosFormProps = {
+  turnstileEnabled?: boolean;
+};
+
+export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
   const [state, formAction, isPending] = useActionState<
     ZglosFormState,
     FormData
@@ -33,12 +37,20 @@ export function ZglosForm() {
   const turnstileRef = useRef<TurnstileInstance>(null);
 
   useEffect(() => {
+    if (!turnstileEnabled) {
+      return;
+    }
+
     if (state?.captchaError || state?.rateLimitError) {
       setTurnstileResetKey((key) => key + 1);
     }
-  }, [state]);
+  }, [state, turnstileEnabled]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!turnstileEnabled) {
+      return;
+    }
+
     const token = turnstileRef.current?.getResponse();
     if (token) {
       return;
@@ -61,7 +73,7 @@ export function ZglosForm() {
         key={formKey}
         ref={formRef}
         action={formAction}
-        onSubmit={handleSubmit}
+        onSubmit={turnstileEnabled ? handleSubmit : undefined}
       >
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
@@ -106,11 +118,13 @@ export function ZglosForm() {
             ) : null}
           </div>
 
-          <TurnstileWidget
-            turnstileRef={turnstileRef}
-            resetKey={turnstileResetKey}
-            onSuccess={handleTurnstileSuccess}
-          />
+          {turnstileEnabled ? (
+            <TurnstileWidget
+              turnstileRef={turnstileRef}
+              resetKey={turnstileResetKey}
+              onSuccess={handleTurnstileSuccess}
+            />
+          ) : null}
 
           {state?.captchaError || state?.rateLimitError ? (
             <p className="text-sm text-destructive">{state.message}</p>
