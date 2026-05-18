@@ -31,3 +31,15 @@ export type Obietnica = {
   fulfilled: boolean;
   notes?: string;
 };
+
+export type ZgloszenieStatus = "pending" | "reviewed" | "rejected" | "accepted";
+
+export type ZgloszenieDocument = {
+  _id: ObjectId;
+  clipUrl: string;
+  description: string;
+  status: ZgloszenieStatus;
+  createdAt: Date;
+};
+
+export type ZgloszenieInsert = Omit<ZgloszenieDocument, "_id">;

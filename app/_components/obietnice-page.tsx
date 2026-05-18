@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { Obietnica } from "@/lib/definitions";
 import { ObietniceList } from "./obietnice-list";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 type ObietnicePageProps = {
   obietnice: Obietnica[];
@@ -20,15 +23,29 @@ export function ObietnicePage({ obietnice }: ObietnicePageProps) {
 function ObietnicePageHeader() {
   return (
     <header className="flex flex-col gap-3">
-      <Badge variant="outline" className="w-fit">
-        DMG
-      </Badge>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Badge variant="outline" className="w-fit">
+          DMG
+        </Badge>
+      </div>
       <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">
-          Lista obietnic
-        </h1>
+        <div className="flex justify-between items-baseline">
+          <h1 className="text-4xl font-semibold tracking-normal text-foreground sm:text-5xl">
+            Lista obietnic
+          </h1>
+          <Link
+            className={
+              buttonVariants({ variant: "default", size: "lg" }) +
+              " rounded-full!"
+            }
+            href="/zglos"
+          >
+            <PlusCircle aria-hidden="true" className="size-4" />
+            Zgłoś klip
+          </Link>
+        </div>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-          Publiczny przegląd obietnic zapisanych w rejestrze scamu.
+          Publiczna przeglądarka obietnic zapisanych w rejestrze scamu.
         </p>
       </div>
     </header>
