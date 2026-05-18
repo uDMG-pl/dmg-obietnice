@@ -25,6 +25,7 @@ const projection = {
   dateDue: 1,
   status: 1,
   notes: 1,
+  tags: 1,
 };
 
 function formatDate(value?: Date | string | null) {
@@ -45,6 +46,16 @@ function normalizeStatus(status?: ObietnicaStatus | null): ObietnicaStatus {
   return status && OBIETNICA_STATUSES.includes(status) ? status : "promised";
 }
 
+function normalizeTags(tags?: string[] | null): string[] {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  return tags
+    .map((tag) => tag.trim())
+    .filter((tag, index, allTags) => tag && allTags.indexOf(tag) === index);
+}
+
 function normalizeObietnica(document: ObietnicaDocument): Obietnica {
   return {
     id: document._id.toString(),
@@ -55,6 +66,7 @@ function normalizeObietnica(document: ObietnicaDocument): Obietnica {
     dateDue: formatDate(document.dateDue),
     status: normalizeStatus(document.status),
     notes: document.notes ?? undefined,
+    tags: normalizeTags(document.tags),
   };
 }
 

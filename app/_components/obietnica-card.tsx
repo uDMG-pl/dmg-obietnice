@@ -37,6 +37,9 @@ export function ObietnicaCard({ obietnica }: ObietnicaCardProps) {
           </div>
 
           <div className="flex flex-wrap gap-2 sm:justify-end">
+            {obietnica.tags.map((tag) => (
+              <ObietnicaTagBadge key={tag} tag={tag} />
+            ))}
             <ObietnicaStatusBadge status={obietnica.status} />
           </div>
         </div>
@@ -81,6 +84,17 @@ function ObietnicaStatusBadge({ status }: { status: ObietnicaStatus }) {
   return (
     <Badge variant="outline" className={config.className}>
       {config.label}
+    </Badge>
+  );
+}
+
+function ObietnicaTagBadge({ tag }: { tag: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className="border-border/60 bg-muted/30 text-muted-foreground"
+    >
+      {tag}
     </Badge>
   );
 }

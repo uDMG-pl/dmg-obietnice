@@ -19,6 +19,7 @@ export type ObietnicaDocument = {
   dateDue?: Date | string | null;
   status?: ObietnicaStatus | null;
   notes?: string | null;
+  tags?: string[] | null;
 };
 
 export type ObietnicaStatus =
@@ -36,6 +37,7 @@ export type Obietnica = {
   dateDue?: string;
   status: ObietnicaStatus;
   notes?: string;
+  tags: string[];
 };
 
 export type ZgloszenieStatus = "pending" | "reviewed" | "rejected" | "accepted";
