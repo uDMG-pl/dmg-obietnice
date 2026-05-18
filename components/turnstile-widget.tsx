@@ -47,7 +47,7 @@ export function TurnstileWidget({
       className="sr-only"
       options={{
         size: "invisible",
-        execution: "execute",
+        execution: "render",
         appearance: "interaction-only",
         language: "pl",
       }}

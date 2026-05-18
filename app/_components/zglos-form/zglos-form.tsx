@@ -1,8 +1,6 @@
 "use client";
 
-import type { TurnstileInstance } from "@marsidev/react-turnstile";
 import { useActionState, useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -33,9 +31,8 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
     FormData
   >(submitZglos, null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [captchaReady, setCaptchaReady] = useState(!turnstileEnabled);
   const formKey = state?.success ? "success" : "default";
-  const formRef = useRef<HTMLFormElement>(null);
-  const turnstileRef = useRef<TurnstileInstance>(null);
   const lastNotifiedState = useRef<ZglosFormState>(null);
 
   useEffect(() => {
@@ -47,6 +44,10 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
 
     if (state.success) {
       toast.success(state.message, { id: "zglos-form" });
+      if (turnstileEnabled) {
+        setCaptchaReady(false);
+        setTurnstileResetKey((key) => key + 1);
+      }
       return;
     }
 
@@ -55,7 +56,7 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
     }
 
     toast.error(state.message, { id: "zglos-form" });
-  }, [state]);
+  }, [state, turnstileEnabled]);
 
   useEffect(() => {
     if (!turnstileEnabled) {
@@ -63,39 +64,20 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
     }
 
     if (state?.captchaError || state?.rateLimitError) {
+      setCaptchaReady(false);
       setTurnstileResetKey((key) => key + 1);
     }
   }, [state, turnstileEnabled]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!turnstileEnabled) {
-      return;
-    }
-
-    const token = turnstileRef.current?.getResponse();
-    if (token) {
-      return;
-    }
-
-    event.preventDefault();
-    turnstileRef.current?.execute();
-  }
-
-  function handleTurnstileSuccess() {
-    formRef.current?.requestSubmit();
-  }
+  const submitDisabled =
+    isPending || (turnstileEnabled && !captchaReady);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Formularz zgłoszenia</CardTitle>
       </CardHeader>
-      <Form
-        key={formKey}
-        ref={formRef}
-        action={formAction}
-        onSubmit={turnstileEnabled ? handleSubmit : undefined}
-      >
+      <Form key={formKey} action={formAction}>
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="clip-url">Clip URL</Label>
@@ -141,16 +123,21 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
 
           {turnstileEnabled ? (
             <TurnstileWidget
-              turnstileRef={turnstileRef}
               resetKey={turnstileResetKey}
-              onSuccess={handleTurnstileSuccess}
+              onSuccess={() => setCaptchaReady(true)}
+              onExpire={() => setCaptchaReady(false)}
             />
           ) : null}
 
+          {turnstileEnabled && !captchaReady ? (
+            <p className="text-sm text-muted-foreground">
+              Przygotowywanie zabezpieczenia formularza…
+            </p>
+          ) : null}
         </CardContent>
 
         <CardFooter className="mt-4 justify-end">
-          <Button type="submit" size="lg" disabled={isPending}>
+          <Button type="submit" size="lg" disabled={submitDisabled}>
             <Send aria-hidden="true" />
             {isPending ? "Wysyłanie…" : "Wyślij"}
           </Button>
