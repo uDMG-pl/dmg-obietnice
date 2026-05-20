@@ -6,7 +6,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { Obietnica, ObietnicaStatus } from "@/lib/definitions";
+import { CircleAlert } from "lucide-react";
 
 const dateFormatter = new Intl.DateTimeFormat("pl-PL", {
   day: "numeric",
@@ -36,7 +42,10 @@ export function ObietnicaCard({ obietnica }: ObietnicaCardProps) {
             ) : null}
           </div>
 
-          <ObietnicaStatusBadge status={obietnica.status} />
+          <div className="flex gap-1 items-center">
+            <ObietnicaNote note={obietnica.notes} />
+            <ObietnicaStatusBadge status={obietnica.status} />
+          </div>
         </div>
       </CardHeader>
 
@@ -72,6 +81,21 @@ const statusConfig = {
     className: string;
   }
 >;
+
+function ObietnicaNote({ note }: { note: Obietnica["notes"] }) {
+  if (!note) {
+    return null;
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger>
+        <CircleAlert className="text-muted-foreground" size={16} />
+      </TooltipTrigger>
+      <TooltipContent>{note}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 function ObietnicaStatusBadge({ status }: { status: ObietnicaStatus }) {
   const config = statusConfig[status];
