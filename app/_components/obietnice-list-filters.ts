@@ -1,4 +1,5 @@
 import type { Obietnica, ObietnicaStatus } from "@/lib/definitions";
+import { getObietnicaDateSortTime } from "@/lib/partial-date";
 
 export type SortOption =
   | "newest"
@@ -185,9 +186,12 @@ function compareObietnice(
   }
 }
 
-function compareDates(firstDate?: string, secondDate?: string) {
-  const firstTime = getDateTime(firstDate);
-  const secondTime = getDateTime(secondDate);
+function compareDates(
+  firstDate?: Obietnica["datePromised"],
+  secondDate?: Obietnica["datePromised"],
+) {
+  const firstTime = getObietnicaDateSortTime(firstDate);
+  const secondTime = getObietnicaDateSortTime(secondDate);
 
   if (firstTime === secondTime) {
     return 0;
@@ -202,16 +206,6 @@ function compareDates(firstDate?: string, secondDate?: string) {
   }
 
   return firstTime - secondTime;
-}
-
-function getDateTime(date?: string) {
-  if (!date) {
-    return undefined;
-  }
-
-  const time = new Date(date).getTime();
-
-  return Number.isNaN(time) ? undefined : time;
 }
 
 function compareTitles(firstTitle: string, secondTitle: string) {

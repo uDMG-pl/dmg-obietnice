@@ -12,13 +12,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { Obietnica, ObietnicaStatus } from "@/lib/definitions";
+import { formatObietnicaDate } from "@/lib/partial-date";
 import { CircleAlert } from "lucide-react";
-
-const dateFormatter = new Intl.DateTimeFormat("pl-PL", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
 
 type ObietnicaCardProps = {
   obietnica: Obietnica;
@@ -123,10 +118,10 @@ function ObietnicaDetails({ obietnica }: ObietnicaCardProps) {
     <CardContent className="flex gap-3 text-sm text-muted-foreground">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {obietnica.datePromised ? (
-          <DateMetadata label="Obiecana" dateTime={obietnica.datePromised} />
+          <DateMetadata label="Obiecana" date={obietnica.datePromised} />
         ) : null}
         {obietnica.dateDue ? (
-          <DateMetadata label="Termin" dateTime={obietnica.dateDue} />
+          <DateMetadata label="Termin" date={obietnica.dateDue} />
         ) : null}
         {obietnica.url ? <SourceLink url={obietnica.url} /> : null}
       </div>
@@ -141,14 +136,14 @@ function ObietnicaDetails({ obietnica }: ObietnicaCardProps) {
 
 function DateMetadata({
   label,
-  dateTime,
+  date,
 }: {
   label: string;
-  dateTime: string;
+  date: NonNullable<Obietnica["datePromised"]>;
 }) {
   return (
     <span>
-      {label}: <time dateTime={dateTime}>{formatDate(dateTime)}</time>
+      {label}: <time dateTime={date.dateTime}>{formatObietnicaDate(date)}</time>
     </span>
   );
 }
@@ -164,8 +159,4 @@ function SourceLink({ url }: { url: string }) {
       Źródło
     </a>
   );
-}
-
-function formatDate(date: string) {
-  return dateFormatter.format(new Date(date));
 }

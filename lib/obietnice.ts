@@ -8,8 +8,13 @@ import type {
   ObietnicaStatus,
 } from "@/lib/definitions";
 import { getMongoDb } from "@/lib/mongodb";
+import {
+  getObietnicaDateSortTime,
+  normalizeObietnicaDate,
+} from "@/lib/partial-date";
 
 const REVALIDATE_SECONDS = Number(process.env.REVALIDATE_SECONDS ?? 300);
+const OBIETNICE_LIMIT = 50;
 const OBIETNICA_STATUSES = [
   "promised",
   "partially_fulfilled",
@@ -27,20 +32,6 @@ const projection = {
   notes: 1,
   tags: 1,
 };
-
-function formatDate(value?: Date | string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  const date = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return undefined;
-  }
-
-  return date.toISOString();
-}
 
 function normalizeStatus(status?: ObietnicaStatus | null): ObietnicaStatus {
   return status && OBIETNICA_STATUSES.includes(status) ? status : "promised";
@@ -62,12 +53,48 @@ function normalizeObietnica(document: ObietnicaDocument): Obietnica {
     title: document.title,
     description: document.description ?? undefined,
     url: document.url ?? undefined,
-    datePromised: formatDate(document.datePromised),
-    dateDue: formatDate(document.dateDue),
+    datePromised: normalizeObietnicaDate(document.datePromised),
+    dateDue: normalizeObietnicaDate(document.dateDue),
     status: normalizeStatus(document.status),
     notes: document.notes ?? undefined,
     tags: normalizeTags(document.tags),
   };
+}
+
+function compareDefaultObietnice(
+  firstObietnica: Obietnica,
+  secondObietnica: Obietnica,
+) {
+  return (
+    compareDatesDescending(
+      firstObietnica.datePromised,
+      secondObietnica.datePromised,
+    ) ||
+    compareDatesDescending(firstObietnica.dateDue, secondObietnica.dateDue) ||
+    secondObietnica.id.localeCompare(firstObietnica.id)
+  );
+}
+
+function compareDatesDescending(
+  firstDate?: Obietnica["datePromised"],
+  secondDate?: Obietnica["datePromised"],
+) {
+  const firstTime = getObietnicaDateSortTime(firstDate);
+  const secondTime = getObietnicaDateSortTime(secondDate);
+
+  if (firstTime === secondTime) {
+    return 0;
+  }
+
+  if (firstTime === undefined) {
+    return 1;
+  }
+
+  if (secondTime === undefined) {
+    return -1;
+  }
+
+  return secondTime - firstTime;
 }
 
 export const getObietnice = unstable_cache(
@@ -77,11 +104,12 @@ export const getObietnice = unstable_cache(
     const documents = await db
       .collection<ObietnicaDocument>(collectionName)
       .find({}, { projection })
-      .sort({ datePromised: -1, dateDue: -1, _id: -1 })
-      .limit(50)
       .toArray();
 
-    return documents.map(normalizeObietnica);
+    return documents
+      .map(normalizeObietnica)
+      .sort(compareDefaultObietnice)
+      .slice(0, OBIETNICE_LIMIT);
   },
   ["obietnice-list"],
   {

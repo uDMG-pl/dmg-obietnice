@@ -20,6 +20,22 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## MongoDB dates
+
+Promise dates can be stored with partial precision:
+
+```js
+{
+  title: "Przykładowa obietnica",
+  datePromised: { year: 2023 },
+  dateDue: { year: 2022, month: 12 }
+}
+```
+
+Use `{ year }` for a year-only date, `{ year, month }` for a month, and
+`{ year, month, day }` for an exact day. Existing `Date` values and ISO strings
+are still supported and are treated as exact day-level dates.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

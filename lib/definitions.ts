@@ -15,11 +15,34 @@ export type ObietnicaDocument = {
   title: string;
   description?: string | null;
   url?: string | null;
-  datePromised?: Date | string | null;
-  dateDue?: Date | string | null;
+  datePromised?: ObietnicaDateDocument;
+  dateDue?: ObietnicaDateDocument;
   status?: ObietnicaStatus | null;
   notes?: string | null;
   tags?: string[] | null;
+};
+
+export type ObietnicaDatePrecision = "year" | "month" | "day";
+
+export type ObietnicaPartialDateDocument = {
+  year: number | string;
+  month?: number | string | null;
+  day?: number | string | null;
+};
+
+export type ObietnicaDateDocument =
+  | Date
+  | string
+  | ObietnicaPartialDateDocument
+  | null;
+
+export type ObietnicaDate = {
+  year: number;
+  month?: number;
+  day?: number;
+  precision: ObietnicaDatePrecision;
+  dateTime: string;
+  sortTime: number;
 };
 
 export type ObietnicaStatus =
@@ -33,8 +56,8 @@ export type Obietnica = {
   title: string;
   description?: string;
   url?: string;
-  datePromised?: string;
-  dateDue?: string;
+  datePromised?: ObietnicaDate;
+  dateDue?: ObietnicaDate;
   status: ObietnicaStatus;
   notes?: string;
   tags: string[];
