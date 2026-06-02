@@ -30,8 +30,8 @@ export const statusOptions: Array<{
   {
     value: "fulfilled_late",
     label: "Spełniona po terminie",
-    indicatorClassName: "bg-orange-100 dark:bg-orange-950/60",
-    dotClassName: "bg-orange-600 dark:bg-orange-400",
+    indicatorClassName: "bg-[#eef1b8] dark:bg-[#2e3315]",
+    dotClassName: "bg-[#6f7727] dark:bg-[#d5dc80]",
   },
   {
     value: "unfulfilled",

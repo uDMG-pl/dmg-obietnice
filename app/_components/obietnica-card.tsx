@@ -67,7 +67,7 @@ const statusConfig = {
   fulfilled_late: {
     label: "Spełniona po terminie",
     className:
-      "border-orange-200 bg-orange-100 text-orange-800 hover:bg-orange-100 dark:border-orange-900/50 dark:bg-orange-950/50 dark:text-orange-300",
+      "border-[#c6c973] bg-[#f0f2bf] text-[#4e5418] hover:bg-[#f0f2bf] dark:border-[#62672d] dark:bg-[#2e3315] dark:text-[#d5dc80]",
   },
   unfulfilled: {
     label: "Niespełniona",
