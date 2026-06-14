@@ -9,7 +9,22 @@ const TURNSTILE_VERIFY_URL =
 const DEV_SECRET_KEY = "1x0000000000000000000000000000000AA";
 
 function getTurnstileSecretKey(): string {
-  return process.env.TURNSTILE_SECRET_KEY ?? DEV_SECRET_KEY;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+
+  if (siteKey && secretKey) {
+    return secretKey;
+  }
+
+  if (process.env.VERCEL_ENV !== "production") {
+    return DEV_SECRET_KEY;
+  }
+
+  throw new Error(
+    siteKey
+      ? "Missing TURNSTILE_SECRET_KEY"
+      : "Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+  );
 }
 
 type TurnstileVerifyResponse = {

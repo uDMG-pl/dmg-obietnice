@@ -26,12 +26,26 @@ type ZglosFormProps = {
 };
 
 export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
+  const [captchaReady, setCaptchaReady] = useState(!turnstileEnabled);
   const [state, formAction, isPending] = useActionState<
     ZglosFormState,
     FormData
-  >(submitZglos, null);
-  const [turnstileResetKey, setTurnstileResetKey] = useState(0);
-  const [captchaReady, setCaptchaReady] = useState(!turnstileEnabled);
+  >(async (prevState, formData) => {
+    const nextState = await submitZglos(prevState, formData);
+
+    if (
+      turnstileEnabled &&
+      (nextState?.success ||
+        nextState?.captchaError ||
+        nextState?.rateLimitError)
+    ) {
+      setCaptchaReady(false);
+      setTurnstileResetKey((key) => key + 1);
+    }
+
+    return nextState;
+  }, null);
   const formKey = state?.success ? "success" : "default";
   const lastNotifiedState = useRef<ZglosFormState>(null);
 
@@ -44,10 +58,6 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
 
     if (state.success) {
       toast.success(state.message, { id: "zglos-form" });
-      if (turnstileEnabled) {
-        setCaptchaReady(false);
-        setTurnstileResetKey((key) => key + 1);
-      }
       return;
     }
 
@@ -56,18 +66,7 @@ export function ZglosForm({ turnstileEnabled = true }: ZglosFormProps) {
     }
 
     toast.error(state.message, { id: "zglos-form" });
-  }, [state, turnstileEnabled]);
-
-  useEffect(() => {
-    if (!turnstileEnabled) {
-      return;
-    }
-
-    if (state?.captchaError || state?.rateLimitError) {
-      setCaptchaReady(false);
-      setTurnstileResetKey((key) => key + 1);
-    }
-  }, [state, turnstileEnabled]);
+  }, [state]);
 
   const submitDisabled =
     isPending || (turnstileEnabled && !captchaReady);

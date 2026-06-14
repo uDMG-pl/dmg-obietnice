@@ -7,5 +7,15 @@ export function isTurnstileEnabled(): boolean {
 }
 
 export function getTurnstileSiteKey(): string {
-  return process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? DEV_SITE_KEY;
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  if (siteKey) {
+    return siteKey;
+  }
+
+  if (process.env.VERCEL_ENV !== "production") {
+    return DEV_SITE_KEY;
+  }
+
+  throw new Error("Missing NEXT_PUBLIC_TURNSTILE_SITE_KEY");
 }
