@@ -23,7 +23,7 @@ const OBIETNICA_STATUSES = [
   "unfulfilled",
 ] as const satisfies readonly ObietnicaStatus[];
 
-const projection = {
+export const OBIETNICA_PROJECTION = {
   title: 1,
   description: 1,
   url: 1,
@@ -48,7 +48,7 @@ function normalizeTags(tags?: string[] | null): string[] {
     .filter((tag, index, allTags) => tag && allTags.indexOf(tag) === index);
 }
 
-function normalizeObietnica(document: ObietnicaDocument): Obietnica {
+export function normalizeObietnica(document: ObietnicaDocument): Obietnica {
   return {
     id: document._id.toString(),
     title: document.title,
@@ -100,11 +100,10 @@ function compareDatesDescending(
 
 export const getObietnice = unstable_cache(
   async () => {
-    const collectionName = process.env.MONGODB_COLLECTION ?? "obietnice";
     const db = await getMongoDb();
     const documents = await db
-      .collection<ObietnicaDocument>(collectionName)
-      .find({}, { projection })
+      .collection<ObietnicaDocument>(getObietniceCollectionName())
+      .find({}, { projection: OBIETNICA_PROJECTION })
       .toArray();
 
     return documents
@@ -118,3 +117,7 @@ export const getObietnice = unstable_cache(
     tags: ["obietnice"],
   },
 );
+
+export function getObietniceCollectionName() {
+  return process.env.MONGODB_COLLECTION ?? "obietnice";
+}

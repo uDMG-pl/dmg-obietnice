@@ -1,0 +1,655 @@
+openapi: 3.1.0
+info:
+  title: DMG Obietnice Management API
+  version: 1.0.0
+  description: |
+    A versioned API for managing public promises. Every endpoint requires an
+    API key in the `x-api-key` header. API responses are not cached.
+servers:
+  - url: /
+    description: Current application origin
+tags:
+  - name: Promises
+    description: Create, read, update, and permanently delete promises.
+security:
+  - ApiKeyAuth: []
+paths:
+  /api/v1/promises:
+    get:
+      tags: [Promises]
+      summary: List promises
+      description: |
+        Returns promises ordered by MongoDB ObjectId in descending order. Use
+        the opaque `nextCursor` value from one response as `cursor` in the next
+        request. Requires the `promises.read` permission.
+      operationId: listPromises
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: A page of promises.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromiseListResponse"
+              examples:
+                page:
+                  value:
+                    data:
+                      - id: 66a12f15f32e7a58d83b6f19
+                        title: Publish the annual report
+                        dateDue:
+                          year: 2026
+                          month: 9
+                        status: promised
+                        tags: [reports]
+                    pagination:
+                      limit: 50
+                      nextCursor: 66a12f15f32e7a58d83b6f19
+                finalPage:
+                  value:
+                    data: []
+                    pagination:
+                      limit: 50
+                      nextCursor: null
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Promises]
+      summary: Create a promise
+      description: |
+        Creates a promise. If omitted, `status` defaults to `promised` and
+        `tags` defaults to an empty array. Requires the `promises.write`
+        permission.
+      operationId: createPromise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromiseCreateRequest"
+            example:
+              title: Publish the annual report
+              description: Make the audited report publicly available.
+              url: https://example.com/announcement
+              datePromised:
+                year: 2025
+                month: 11
+                day: 4
+              dateDue:
+                year: 2026
+                month: 9
+              status: promised
+              tags: [reports, transparency]
+      responses:
+        "201":
+          description: Promise created.
+          headers:
+            Location:
+              description: Absolute URL of the created promise.
+              schema:
+                type: string
+                format: uri
+              example: http://localhost:3000/api/v1/promises/66a12f15f32e7a58d83b6f19
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromiseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/promises/{id}:
+    parameters:
+      - $ref: "#/components/parameters/PromiseId"
+    get:
+      tags: [Promises]
+      summary: Get a promise
+      description: Returns one promise. Requires the `promises.read` permission.
+      operationId: getPromise
+      responses:
+        "200":
+          description: Promise found.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromiseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Promises]
+      summary: Update a promise
+      description: |
+        Applies a partial update and requires at least one field. Set
+        `description`, `url`, `datePromised`, `dateDue`, or `notes` to `null`
+        to remove it. An empty `tags` array clears all tags. `status` and
+        `tags` cannot be `null`. Requires the `promises.write` permission.
+      operationId: updatePromise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromisePatchRequest"
+            examples:
+              markFulfilled:
+                value:
+                  status: fulfilled
+                  notes: null
+              clearTags:
+                value:
+                  tags: []
+      responses:
+        "200":
+          description: Promise updated.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromiseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Promises]
+      summary: Delete a promise
+      description: |
+        Permanently deletes a promise. Requires the `promises.write`
+        permission.
+      operationId: deletePromise
+      responses:
+        "204":
+          description: Promise deleted. The response has no body.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: API key created with the local `npm run api-keys` command.
+  headers:
+    NoStore:
+      description: Management API responses are never cached.
+      schema:
+        type: string
+        const: no-store
+      example: no-store
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Maximum number of promises returned in this page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+      example: 25
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque `nextCursor` value from the preceding page.
+      schema:
+        type: string
+        pattern: "^[0-9a-fA-F]{24}$"
+      example: 66a12f15f32e7a58d83b6f19
+    PromiseId:
+      name: id
+      in: path
+      required: true
+      description: MongoDB ObjectId of the promise.
+      schema:
+        type: string
+        pattern: "^[0-9a-fA-F]{24}$"
+      example: 66a12f15f32e7a58d83b6f19
+  responses:
+    BadRequest:
+      description: The query, path parameter, JSON, or request body is invalid.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            validation:
+              value:
+                error:
+                  code: VALIDATION_ERROR
+                  message: Request validation failed.
+                  details:
+                    - path: title
+                      code: too_small
+                      message: "Too small: expected string to have >=1 characters"
+            invalidJson:
+              value:
+                error:
+                  code: INVALID_JSON
+                  message: Request body is not valid JSON.
+            invalidId:
+              value:
+                error:
+                  code: INVALID_ID
+                  message: Promise id must be a 24-character hexadecimal ObjectId.
+    Unauthorized:
+      description: The API key is missing, invalid, revoked, or expired.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+        WWW-Authenticate:
+          description: Authentication challenge for the management API.
+          schema:
+            type: string
+            const: 'ApiKey realm="promises-api"'
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: API key is required.
+    Forbidden:
+      description: The API key does not have the required permission.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: FORBIDDEN
+              message: API key does not have the required permission.
+    NotFound:
+      description: No promise exists with the supplied ID.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: NOT_FOUND
+              message: Promise was not found.
+    UnsupportedMediaType:
+      description: The request body is not JSON.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: UNSUPPORTED_MEDIA_TYPE
+              message: Content-Type must be application/json.
+    TooManyRequests:
+      description: The per-key request limit has been exceeded.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+        Retry-After:
+          description: Optional number of seconds until another request may be attempted.
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: RATE_LIMIT_EXCEEDED
+              message: API key rate limit exceeded.
+    InternalError:
+      description: An unexpected server error occurred.
+      headers:
+        Cache-Control:
+          $ref: "#/components/headers/NoStore"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred.
+  schemas:
+    PromiseStatus:
+      type: string
+      enum:
+        - promised
+        - partially_fulfilled
+        - fulfilled
+        - fulfilled_late
+        - unfulfilled
+    PartialDate:
+      description: |
+        A calendar date with year, month, or day precision. The server validates
+        the actual calendar date, including leap years.
+      oneOf:
+        - $ref: "#/components/schemas/YearDate"
+        - $ref: "#/components/schemas/MonthDate"
+        - $ref: "#/components/schemas/DayDate"
+    YearDate:
+      type: object
+      additionalProperties: false
+      required: [year]
+      properties:
+        year:
+          type: integer
+          minimum: 1000
+          maximum: 9999
+      example:
+        year: 2026
+    MonthDate:
+      type: object
+      additionalProperties: false
+      required: [year, month]
+      properties:
+        year:
+          type: integer
+          minimum: 1000
+          maximum: 9999
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+      example:
+        year: 2026
+        month: 7
+    DayDate:
+      type: object
+      additionalProperties: false
+      required: [year, month, day]
+      properties:
+        year:
+          type: integer
+          minimum: 1000
+          maximum: 9999
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        day:
+          type: integer
+          minimum: 1
+          maximum: 31
+      example:
+        year: 2026
+        month: 7
+        day: 11
+    Promise:
+      type: object
+      additionalProperties: false
+      required: [id, title, status, tags]
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+          description: MongoDB ObjectId represented as a string.
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        url:
+          type: string
+          format: uri
+        datePromised:
+          $ref: "#/components/schemas/PartialDate"
+        dateDue:
+          $ref: "#/components/schemas/PartialDate"
+        notes:
+          type: string
+        status:
+          $ref: "#/components/schemas/PromiseStatus"
+        tags:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+      example:
+        id: 66a12f15f32e7a58d83b6f19
+        title: Publish the annual report
+        description: Make the audited report publicly available.
+        url: https://example.com/announcement
+        datePromised:
+          year: 2025
+          month: 11
+          day: 4
+        dateDue:
+          year: 2026
+          month: 9
+        status: promised
+        tags: [reports, transparency]
+    PromiseCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 2000
+        url:
+          type: [string, "null"]
+          format: uri
+          pattern: "^https://"
+          maxLength: 2048
+        datePromised:
+          anyOf:
+            - $ref: "#/components/schemas/PartialDate"
+            - type: "null"
+        dateDue:
+          anyOf:
+            - $ref: "#/components/schemas/PartialDate"
+            - type: "null"
+        notes:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 2000
+        status:
+          allOf:
+            - $ref: "#/components/schemas/PromiseStatus"
+          default: promised
+        tags:
+          type: array
+          default: []
+          maxItems: 20
+          description: Values are trimmed and duplicates are removed.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+    PromisePatchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 2000
+        url:
+          type: [string, "null"]
+          format: uri
+          pattern: "^https://"
+          maxLength: 2048
+        datePromised:
+          anyOf:
+            - $ref: "#/components/schemas/PartialDate"
+            - type: "null"
+        dateDue:
+          anyOf:
+            - $ref: "#/components/schemas/PartialDate"
+            - type: "null"
+        notes:
+          type: [string, "null"]
+          minLength: 1
+          maxLength: 2000
+        status:
+          $ref: "#/components/schemas/PromiseStatus"
+        tags:
+          type: array
+          maxItems: 20
+          description: Values are trimmed and duplicates are removed.
+          items:
+            type: string
+            minLength: 1
+            maxLength: 64
+    PromiseResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Promise"
+    Pagination:
+      type: object
+      additionalProperties: false
+      required: [limit, nextCursor]
+      properties:
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        nextCursor:
+          type: [string, "null"]
+          pattern: "^[0-9a-fA-F]{24}$"
+          description: Opaque cursor for the next page, or `null` on the final page.
+    PromiseListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Promise"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable, machine-readable error code.
+          enum:
+            - INVALID_JSON
+            - VALIDATION_ERROR
+            - INVALID_ID
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - RATE_LIMIT_EXCEEDED
+            - INTERNAL_ERROR
+            - UNSUPPORTED_MEDIA_TYPE
+        message:
+          type: string
+          description: Human-readable error summary.
+        details:
+          description: Optional structured validation or diagnostic details.
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+    ValidationIssue:
+      type: object
+      additionalProperties: false
+      required: [path, code, message]
+      properties:
+        path:
+          type: string
+        code:
+          type: string
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"
