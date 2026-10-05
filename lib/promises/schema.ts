@@ -90,10 +90,16 @@ export const promisePatchSchema = z
     message: "At least one field must be provided.",
   });
 
-export const promiseListQuerySchema = z.strictObject({
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.string().regex(objectIdPattern).optional(),
-});
+export const promiseListQuerySchema = z
+  .strictObject({
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.string().regex(objectIdPattern).optional(),
+    page: z.coerce.number().int().positive().optional(),
+  })
+  .refine((query) => query.page === undefined || query.cursor === undefined, {
+    message: "Use either page or cursor, not both.",
+    path: ["page"],
+  });
 
 export const promiseIdSchema = z.string().regex(objectIdPattern);
 

@@ -18,12 +18,45 @@ import type {
 export type PromisePage = {
   items: Obietnica[];
   nextCursor: string | null;
+  pagination?: {
+    currentPage: number;
+    totalCount: number;
+    totalPages: number;
+  };
 };
 
 export async function listPromises(
   query: PromiseListQuery,
 ): Promise<PromisePage> {
   const collection = await getPromisesCollection();
+  if (query.page !== undefined) {
+    // Count using the existing ID index, then fetch only the requested page.
+    const totalCount = await collection.countDocuments(
+      {},
+      {
+        hint: "_id_",
+        maxTimeMS: 5_000,
+      },
+    );
+    const totalPages = Math.max(1, Math.ceil(totalCount / query.limit));
+    const currentPage = Math.min(query.page, totalPages);
+    const documents = await collection
+      .find({}, { projection: OBIETNICA_PROJECTION, maxTimeMS: 5_000 })
+      .sort({ _id: -1 })
+      .skip((currentPage - 1) * query.limit)
+      .limit(query.limit)
+      .toArray();
+
+    return {
+      items: documents.map(normalizeObietnica),
+      nextCursor:
+        currentPage < totalPages
+          ? (documents.at(-1)?._id.toHexString() ?? null)
+          : null,
+      pagination: { currentPage, totalCount, totalPages },
+    };
+  }
+
   const filter: Filter<ObietnicaDocument> = query.cursor
     ? { _id: { $lt: new ObjectId(query.cursor) } }
     : {};
@@ -40,7 +73,7 @@ export async function listPromises(
   return {
     items: pageDocuments.map(normalizeObietnica),
     nextCursor: hasNextPage
-      ? pageDocuments.at(-1)?._id.toHexString() ?? null
+      ? (pageDocuments.at(-1)?._id.toHexString() ?? null)
       : null,
   };
 }
@@ -110,9 +143,7 @@ async function getPromisesCollection(): Promise<Collection<ObietnicaDocument>> {
   return db.collection<ObietnicaDocument>(getObietniceCollectionName());
 }
 
-function createPromiseDocument(
-  input: PromiseCreateInput,
-): ObietnicaDocument {
+function createPromiseDocument(input: PromiseCreateInput): ObietnicaDocument {
   return {
     _id: new ObjectId(),
     title: input.title,

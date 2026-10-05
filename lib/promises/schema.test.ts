@@ -83,13 +83,12 @@ describe("promise payload schemas", () => {
     });
   });
 
-  it.each([
-    { title: null },
-    { status: null },
-    { extra: "field" },
-  ])("rejects an invalid PATCH payload: %j", (payload) => {
-    expect(promisePatchSchema.safeParse(payload).success).toBe(false);
-  });
+  it.each([{ title: null }, { status: null }, { extra: "field" }])(
+    "rejects an invalid PATCH payload: %j",
+    (payload) => {
+      expect(promisePatchSchema.safeParse(payload).success).toBe(false);
+    },
+  );
 });
 
 describe("promise list and id schemas", () => {
@@ -100,9 +99,14 @@ describe("promise list and id schemas", () => {
   });
 
   it("coerces URL search parameters", () => {
-    expect(
-      promiseListQuerySchema.parse({ limit: "100", cursor }),
-    ).toEqual({ limit: 100, cursor });
+    expect(promiseListQuerySchema.parse({ limit: "100", cursor })).toEqual({
+      limit: 100,
+      cursor,
+    });
+    expect(promiseListQuerySchema.parse({ page: "7", limit: "25" })).toEqual({
+      page: 7,
+      limit: 25,
+    });
   });
 
   it.each([
@@ -110,6 +114,12 @@ describe("promise list and id schemas", () => {
     { limit: "101" },
     { limit: "1.5" },
     { cursor: "not-an-object-id" },
+    { page: "0" },
+    { page: "-1" },
+    { page: "1.5" },
+    { page: "no-page" },
+    { page: "9007199254740992" },
+    { page: "2", cursor },
     { extra: "query" },
   ])("rejects an invalid list query: %j", (query) => {
     expect(promiseListQuerySchema.safeParse(query).success).toBe(false);

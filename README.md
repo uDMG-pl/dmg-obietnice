@@ -141,6 +141,23 @@ curl --get "$BASE_URL/api/v1/promises" \
   --data-urlencode "cursor=66a12f15f32e7a58d83b6f19"
 ```
 
+For numbered navigation, request a page directly (one-based):
+
+```bash
+curl --get "$BASE_URL/api/v1/promises" \
+  --header "x-api-key: $API_KEY" \
+  --data-urlencode "limit=25" \
+  --data-urlencode "page=2"
+```
+
+This returns only the requested page and adds `currentPage`, `totalCount`, and
+`totalPages` to `pagination`. Out-of-range pages are clamped to the last page;
+an empty collection returns page 1 of 1. `page` and `cursor` cannot be combined.
+Existing requests without `page` retain the original cursor response.
+
+Deploy this service version before the UDMG numbered admin promises panel.
+No MongoDB migration, additional index or replacement API key is required.
+
 Get one promise:
 
 ```bash
