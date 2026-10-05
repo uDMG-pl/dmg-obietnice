@@ -105,6 +105,16 @@ describe("GET /api/v1/promises", () => {
       error: { code: "VALIDATION_ERROR" },
     });
   });
+
+  it("rejects unknown query parameters instead of silently ignoring them", async () => {
+    const response = await GET(request("?limti=1"));
+
+    expect(response.status).toBe(400);
+    expect(mocks.listPromises).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "VALIDATION_ERROR" },
+    });
+  });
 });
 
 describe("POST /api/v1/promises", () => {

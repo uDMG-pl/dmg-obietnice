@@ -232,6 +232,16 @@ npm run lint
 npm run build
 ```
 
+Run the integration suite against a local MongoDB instance to exercise the real
+Better Auth adapter, API routes, and CLI processes:
+
+```bash
+TEST_MONGODB_URI=mongodb://127.0.0.1:27017 npm test
+```
+
+The suite creates and drops a uniquely named test database. Without
+`TEST_MONGODB_URI`, these integration tests are skipped.
+
 ## Learn more
 
 - [Next.js documentation](https://nextjs.org/docs)

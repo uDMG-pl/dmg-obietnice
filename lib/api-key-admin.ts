@@ -59,6 +59,8 @@ export async function listManagedApiKeys() {
       field: "createdAt",
       direction: "desc",
     },
+    // Zero means unbounded in the MongoDB adapter; omitting it caps results at 100.
+    limit: 0,
   });
 
   return keys.map((key) => ({

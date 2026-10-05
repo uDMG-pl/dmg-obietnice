@@ -50,3 +50,20 @@ export async function getMongoDb(dbName = process.env.MONGODB_DB): Promise<Db> {
 
   return client.db(dbName);
 }
+
+// CLI processes must release the pool; do not open a connection just to close it.
+export async function closeMongoClient(): Promise<void> {
+  const connections = new Set([
+    mongoClientPromise,
+    globalForMongo.__mongoClientPromise,
+  ]);
+  mongoClientPromise = undefined;
+  mongoClientUri = undefined;
+  globalForMongo.__mongoClientPromise = undefined;
+  globalForMongo.__mongoClientUri = undefined;
+
+  await Promise.all(Array.from(connections, async (connection) => {
+    const client = await connection?.catch(() => undefined);
+    await client?.close();
+  }));
+}

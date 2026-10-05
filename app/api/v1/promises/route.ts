@@ -24,10 +24,9 @@ export async function GET(request: NextRequest): Promise<Response> {
       return authentication.response;
     }
 
-    const parsedQuery = promiseListQuerySchema.safeParse({
-      limit: request.nextUrl.searchParams.get("limit") ?? undefined,
-      cursor: request.nextUrl.searchParams.get("cursor") ?? undefined,
-    });
+    const parsedQuery = promiseListQuerySchema.safeParse(
+      Object.fromEntries(request.nextUrl.searchParams),
+    );
     if (!parsedQuery.success) {
       return validationError(parsedQuery.error);
     }

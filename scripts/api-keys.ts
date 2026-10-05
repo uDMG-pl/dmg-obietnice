@@ -1,9 +1,11 @@
+import { parseArgs } from "node:util";
+
 import {
   createManagedApiKey,
   listManagedApiKeys,
   revokeManagedApiKey,
-  type ManagedApiKeyScope,
 } from "../lib/api-key-admin";
+import { closeMongoClient } from "../lib/mongodb";
 
 const [, , command, ...args] = process.argv;
 
@@ -24,24 +26,34 @@ async function main() {
 }
 
 async function createKey(args: string[]) {
-  const name = readRequiredFlag(args, "--name");
+  const { values } = parseArgs({
+    args,
+    options: {
+      name: { type: "string" },
+      scope: { type: "string" },
+      "expires-in-days": { type: "string" },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
+  const name = readRequiredFlag(values, "name");
   if (name.length > 32) {
     throw new Error("--name must be at most 32 characters.");
   }
 
-  const scope = readRequiredFlag(args, "--scope");
+  const scope = readRequiredFlag(values, "scope");
   if (scope !== "read" && scope !== "read-write") {
     throw new Error("--scope must be read or read-write.");
   }
 
-  const expiresInDays = readOptionalPositiveInteger(args, "--expires-in-days");
+  const expiresInDays = readOptionalPositiveInteger(values, "expires-in-days");
   if (expiresInDays !== undefined && expiresInDays > 365) {
     throw new Error("--expires-in-days must not exceed 365.");
   }
 
   const key = await createManagedApiKey({
     name,
-    scope: scope as ManagedApiKeyScope,
+    scope,
     expiresInDays,
   });
 
@@ -60,32 +72,36 @@ async function listKeys(args: string[]) {
 }
 
 async function revokeKey(args: string[]) {
-  const id = readRequiredFlag(args, "--id");
+  const { values } = parseArgs({
+    args,
+    options: { id: { type: "string" } },
+    strict: true,
+    allowPositionals: false,
+  });
+  const id = readRequiredFlag(values, "id");
   await revokeManagedApiKey(id);
 
   console.log(`API key ${id} revoked.`);
 }
 
-function readRequiredFlag(args: string[], flag: string) {
-  const index = args.indexOf(flag);
-  const value = index >= 0 ? args[index + 1] : undefined;
+function readRequiredFlag(values: Record<string, string | undefined>, flag: string) {
+  const value = values[flag]?.trim();
 
   if (!value || value.startsWith("--")) {
-    throw new Error(`Missing required ${flag} value.\n\n${usage()}`);
+    throw new Error(`Missing required --${flag} value.\n\n${usage()}`);
   }
 
   return value;
 }
 
-function readOptionalPositiveInteger(args: string[], flag: string) {
-  const index = args.indexOf(flag);
-  if (index < 0) {
+function readOptionalPositiveInteger(values: Record<string, string | undefined>, flag: string) {
+  if (values[flag] === undefined) {
     return undefined;
   }
 
-  const value = Number(args[index + 1]);
+  const value = Number(values[flag]);
   if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`${flag} must be a positive integer.`);
+    throw new Error(`--${flag} must be a positive integer.`);
   }
 
   return value;
@@ -106,8 +122,10 @@ function usage() {
   ].join("\n");
 }
 
-main().catch((error: unknown) => {
+function reportError(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown error.";
   console.error(message);
   process.exitCode = 1;
-});
+}
+
+main().catch(reportError).finally(closeMongoClient).catch(reportError);
