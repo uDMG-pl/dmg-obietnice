@@ -5,6 +5,7 @@ import type { Obietnica, ObietnicaStatus } from "@/lib/definitions";
 
 const mocks = vi.hoisted(() => ({
   collection: vi.fn(),
+  countDocuments: vi.fn(),
   deleteOne: vi.fn(),
   find: vi.fn(),
   findOne: vi.fn(),
@@ -24,6 +25,7 @@ const mocks = vi.hoisted(() => ({
     tags: 1,
   },
   sort: vi.fn(),
+  skip: vi.fn(),
   toArray: vi.fn(),
 }));
 
@@ -58,6 +60,7 @@ describe("promise repository", () => {
 
     mocks.getMongoDb.mockResolvedValue({ collection: mocks.collection });
     mocks.collection.mockReturnValue({
+      countDocuments: mocks.countDocuments,
       deleteOne: mocks.deleteOne,
       find: mocks.find,
       findOne: mocks.findOne,
@@ -65,7 +68,8 @@ describe("promise repository", () => {
       insertOne: mocks.insertOne,
     });
     mocks.find.mockReturnValue({ sort: mocks.sort });
-    mocks.sort.mockReturnValue({ limit: mocks.limit });
+    mocks.sort.mockReturnValue({ limit: mocks.limit, skip: mocks.skip });
+    mocks.skip.mockReturnValue({ limit: mocks.limit });
     mocks.limit.mockReturnValue({ toArray: mocks.toArray });
     mocks.normalizeObietnica.mockImplementation(normalizeFixture);
   });
@@ -110,6 +114,56 @@ describe("promise repository", () => {
     );
     expect(result.nextCursor).toBeNull();
     expect(result.items).toHaveLength(2);
+    expect(mocks.countDocuments).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { requestedPage: 2, totalCount: 151, currentPage: 2, totalPages: 7 },
+    { requestedPage: 999, totalCount: 151, currentPage: 7, totalPages: 7 },
+    { requestedPage: 999, totalCount: 0, currentPage: 1, totalPages: 1 },
+  ])("fetches a bounded numbered page: %j", async (expected) => {
+    const documents =
+      expected.totalCount === 0
+        ? []
+        : [fixture("507f1f77bcf86cd799439011", "Strona")];
+    mocks.countDocuments.mockResolvedValue(expected.totalCount);
+    mocks.toArray.mockResolvedValue(documents);
+
+    const result = await listPromises({
+      page: expected.requestedPage,
+      limit: 25,
+    });
+
+    expect(mocks.countDocuments).toHaveBeenCalledWith(
+      {},
+      {
+        hint: "_id_",
+        maxTimeMS: 5_000,
+      },
+    );
+    expect(mocks.find).toHaveBeenCalledOnce();
+    expect(mocks.find).toHaveBeenCalledWith(
+      {},
+      {
+        projection: mocks.projection,
+        maxTimeMS: 5_000,
+      },
+    );
+    expect(mocks.sort).toHaveBeenCalledWith({ _id: -1 });
+    expect(mocks.skip).toHaveBeenCalledWith((expected.currentPage - 1) * 25);
+    expect(mocks.limit).toHaveBeenCalledWith(25);
+    expect(result).toEqual({
+      items: documents.map(normalizeFixture),
+      nextCursor:
+        expected.currentPage < expected.totalPages
+          ? documents[0]._id.toHexString()
+          : null,
+      pagination: {
+        currentPage: expected.currentPage,
+        totalCount: expected.totalCount,
+        totalPages: expected.totalPages,
+      },
+    });
   });
 
   it("creates and inserts a document compatible with the existing collection", async () => {
@@ -194,20 +248,17 @@ describe("promise repository", () => {
   it.each([
     [0, false],
     [1, true],
-  ])(
-    "maps deletedCount=%i to %j",
-    async (deletedCount, expected) => {
-      const promiseId = "507f1f77bcf86cd799439011";
-      mocks.deleteOne.mockResolvedValue({ deletedCount });
+  ])("maps deletedCount=%i to %j", async (deletedCount, expected) => {
+    const promiseId = "507f1f77bcf86cd799439011";
+    mocks.deleteOne.mockResolvedValue({ deletedCount });
 
-      const result = await deletePromise(promiseId);
+    const result = await deletePromise(promiseId);
 
-      expect(mocks.deleteOne).toHaveBeenCalledWith({
-        _id: new ObjectId(promiseId),
-      });
-      expect(result).toBe(expected);
-    },
-  );
+    expect(mocks.deleteOne).toHaveBeenCalledWith({
+      _id: new ObjectId(promiseId),
+    });
+    expect(result).toBe(expected);
+  });
 });
 
 function fixture(id: string, title: string): PromiseDocumentFixture {

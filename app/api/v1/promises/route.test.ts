@@ -45,7 +45,10 @@ describe("GET /api/v1/promises", () => {
   beforeEach(acceptAuthentication);
 
   it("forwards an authentication rejection", async () => {
-    const denied = Response.json({ error: { code: "UNAUTHORIZED" } }, { status: 401 });
+    const denied = Response.json(
+      { error: { code: "UNAUTHORIZED" } },
+      { status: 401 },
+    );
     mocks.authenticateApiKey.mockResolvedValue({
       authenticated: false,
       response: denied,
@@ -115,6 +118,41 @@ describe("GET /api/v1/promises", () => {
       error: { code: "VALIDATION_ERROR" },
     });
   });
+
+  it("returns numbered pagination without changing the cursor response fields", async () => {
+    mocks.listPromises.mockResolvedValue({
+      items: [promiseFixture],
+      nextCursor: null,
+      pagination: { currentPage: 7, totalCount: 151, totalPages: 7 },
+    });
+
+    const response = await GET(request("?page=7&limit=25"));
+
+    expect(mocks.listPromises).toHaveBeenCalledWith({ page: 7, limit: 25 });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toMatchObject({
+      data: [{ id: promiseFixture.id }],
+      pagination: {
+        limit: 25,
+        nextCursor: null,
+        currentPage: 7,
+        totalCount: 151,
+        totalPages: 7,
+      },
+    });
+  });
+
+  it.each([
+    "?page=0",
+    "?page=1.5",
+    "?page=",
+    "?page=2&cursor=507f1f77bcf86cd799439011",
+  ])("rejects invalid or mixed pagination: %s", async (query) => {
+    const response = await GET(request(query));
+    expect(response.status).toBe(400);
+    expect(mocks.listPromises).not.toHaveBeenCalled();
+  });
 });
 
 describe("POST /api/v1/promises", () => {
@@ -130,9 +168,7 @@ describe("POST /api/v1/promises", () => {
   });
 
   it("reports malformed JSON", async () => {
-    const response = await POST(
-      jsonRequest("{", { method: "POST" }),
-    );
+    const response = await POST(jsonRequest("{", { method: "POST" }));
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -181,10 +217,7 @@ function acceptAuthentication() {
 }
 
 function request(search = "", init?: NextRequestInit) {
-  return new NextRequest(
-    `https://example.test/api/v1/promises${search}`,
-    init,
-  );
+  return new NextRequest(`https://example.test/api/v1/promises${search}`, init);
 }
 
 function jsonRequest(body: string, init?: NextRequestInit) {

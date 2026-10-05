@@ -38,6 +38,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       pagination: {
         limit: parsedQuery.data.limit,
         nextCursor: page.nextCursor,
+        ...page.pagination,
       },
     });
   } catch (error) {
@@ -98,7 +99,6 @@ function isJsonRequest(request: Request) {
       .get("content-type")
       ?.split(";", 1)[0]
       ?.trim()
-      .toLowerCase() ===
-    "application/json"
+      .toLowerCase() === "application/json"
   );
 }

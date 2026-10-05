@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: DMG Obietnice Management API
-  version: 1.0.0
+  version: 1.1.0
   description: |
     A versioned API for managing public promises. Every endpoint requires an
     API key in the `x-api-key` header. API responses are not cached.
@@ -21,11 +21,15 @@ paths:
       description: |
         Returns promises ordered by MongoDB ObjectId in descending order. Use
         the opaque `nextCursor` value from one response as `cursor` in the next
-        request. Requires the `promises.read` permission.
+        request. Alternatively, pass `page` for numbered pagination with an
+        exact total count. `page` and `cursor` cannot be combined. Pages beyond
+        the last page are clamped; an empty collection has page 1 of 1.
+        Requires the `promises.read` permission.
       operationId: listPromises
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Page"
       responses:
         "200":
           description: A page of promises.
@@ -56,6 +60,15 @@ paths:
                     pagination:
                       limit: 50
                       nextCursor: null
+                numberedPage:
+                  value:
+                    data: []
+                    pagination:
+                      limit: 25
+                      nextCursor: null
+                      currentPage: 1
+                      totalCount: 0
+                      totalPages: 1
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -253,11 +266,21 @@ components:
       name: cursor
       in: query
       required: false
-      description: Opaque `nextCursor` value from the preceding page.
+      description: Opaque `nextCursor` value from the preceding page. Cannot be combined with `page`.
       schema:
         type: string
         pattern: "^[0-9a-fA-F]{24}$"
       example: 66a12f15f32e7a58d83b6f19
+    Page:
+      name: page
+      in: query
+      required: false
+      description: One-based page number. Enables exact counts and clamps to the last page. Cannot be combined with `cursor`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 9007199254740991
+      example: 2
     PromiseId:
       name: id
       in: path
@@ -589,6 +612,10 @@ components:
       type: object
       additionalProperties: false
       required: [limit, nextCursor]
+      dependentRequired:
+        currentPage: [totalCount, totalPages]
+        totalCount: [currentPage, totalPages]
+        totalPages: [currentPage, totalCount]
       properties:
         limit:
           type: integer
@@ -598,6 +625,18 @@ components:
           type: [string, "null"]
           pattern: "^[0-9a-fA-F]{24}$"
           description: Opaque cursor for the next page, or `null` on the final page.
+        currentPage:
+          type: integer
+          minimum: 1
+          description: Actual page after clamping. Present only when `page` is supplied.
+        totalCount:
+          type: integer
+          minimum: 0
+          description: Total number of promises. Present only when `page` is supplied.
+        totalPages:
+          type: integer
+          minimum: 1
+          description: Total pages, at least 1. Present only when `page` is supplied.
     PromiseListResponse:
       type: object
       additionalProperties: false
