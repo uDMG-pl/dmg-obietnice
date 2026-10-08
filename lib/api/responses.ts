@@ -57,7 +57,7 @@ export function emptyApiResponse(status: number): Response {
 }
 
 export function internalApiError(error: unknown): Response {
-  console.error("Promises API request failed.", error);
+  console.error("Management API request failed.", error);
 
   return apiError(
     500,

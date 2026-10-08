@@ -6,6 +6,8 @@ import { betterAuth } from "better-auth";
 
 import { getMongoClient, getMongoDb } from "@/lib/mongodb";
 
+// Keep the existing config and permission resource for both management APIs.
+// Changing either would require migrating previously issued keys.
 export const API_KEY_CONFIG_ID = "promises";
 export const API_KEY_PERMISSION_RESOURCE = "promises";
 

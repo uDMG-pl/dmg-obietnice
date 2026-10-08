@@ -1,16 +1,21 @@
 openapi: 3.1.0
 info:
   title: DMG Obietnice Management API
-  version: 1.1.0
+  version: 1.2.0
   description: |
-    A versioned API for managing public promises. Every endpoint requires an
-    API key in the `x-api-key` header. API responses are not cached.
+    A versioned API for managing public promises and submissions. Every endpoint
+    requires an API key in the `x-api-key` header. Both resources use the existing
+    `promises.read` and `promises.write` permissions and share per-key rate limits.
+    Previously issued keys and existing MongoDB documents require no migration.
+    API responses are not cached.
 servers:
   - url: /
     description: Current application origin
 tags:
   - name: Promises
     description: Create, read, update, and permanently delete promises.
+  - name: Submissions
+    description: Create, read, moderate, and permanently delete submissions.
 security:
   - ApiKeyAuth: []
 paths:
@@ -236,13 +241,190 @@ paths:
           $ref: "#/components/responses/TooManyRequests"
         "500":
           $ref: "#/components/responses/InternalError"
+  /api/v1/submissions:
+    get:
+      tags: [Submissions]
+      summary: List submissions
+      description: |
+        Reads the existing zgloszenia collection, ordered by descending MongoDB
+        ObjectId. Optionally filter by status. Use nextCursor as cursor for the
+        next page and preserve the status filter. Alternatively, pass page for
+        numbered pagination with exact filtered counts. Page and cursor cannot
+        be combined. Pages beyond the last page are clamped; empty results have
+        page 1 of 1. Requires the existing promises.read permission.
+      operationId: listSubmissions
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/SubmissionStatusFilter"
+      responses:
+        "200":
+          description: A page of submissions.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      tags: [Submissions]
+      summary: Create a submission
+      description: |
+        Creates a submission in zgloszenia. Status defaults to pending. The server
+        assigns id and createdAt. Content uses the same validation as the public
+        form. Requires the existing promises.write permission. This trusted API
+        uses per-key rate limits and does not require a Turnstile token.
+      operationId: createSubmission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionCreateRequest"
+            example:
+              clipUrl: https://youtu.be/example
+              description: A promise to publish the annual report.
+      responses:
+        "201":
+          description: Submission created.
+          headers:
+            Location:
+              description: Absolute URL of the created submission.
+              schema:
+                type: string
+                format: uri
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /api/v1/submissions/{id}:
+    parameters:
+      - $ref: "#/components/parameters/SubmissionId"
+    get:
+      tags: [Submissions]
+      summary: Get a submission
+      description: Returns one submission. Requires the existing promises.read permission.
+      operationId: getSubmission
+      responses:
+        "200":
+          description: Submission found.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      tags: [Submissions]
+      summary: Update a submission
+      description: |
+        Applies a partial update to status, clipUrl, or description; at least one
+        field is required. Fields cannot be null. id and createdAt are read-only.
+        Status changes are allowed in either direction. Accepting a submission
+        does not create or publish a promise. Requires the existing promises.write
+        permission.
+      operationId: updateSubmission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionPatchRequest"
+            example:
+              status: accepted
+      responses:
+        "200":
+          description: Submission updated.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      tags: [Submissions]
+      summary: Delete a submission
+      description: Permanently deletes a submission. Requires the existing promises.write permission.
+      operationId: deleteSubmission
+      responses:
+        "204":
+          description: Submission deleted. The response has no body.
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalError"
 components:
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
       in: header
       name: x-api-key
-      description: API key created with the local `npm run api-keys` command.
+      description: Existing promise API keys work for both resources, including their read/write scopes.
   headers:
     NoStore:
       description: Management API responses are never cached.
@@ -255,7 +437,7 @@ components:
       name: limit
       in: query
       required: false
-      description: Maximum number of promises returned in this page.
+      description: Maximum number of resources returned in this page.
       schema:
         type: integer
         minimum: 1
@@ -290,6 +472,22 @@ components:
         type: string
         pattern: "^[0-9a-fA-F]{24}$"
       example: 66a12f15f32e7a58d83b6f19
+    SubmissionId:
+      name: id
+      in: path
+      required: true
+      description: MongoDB ObjectId of the submission.
+      schema:
+        type: string
+        pattern: "^[0-9a-fA-F]{24}$"
+      example: 66a12f15f32e7a58d83b6f19
+    SubmissionStatusFilter:
+      name: status
+      in: query
+      required: false
+      description: Return only submissions with this status. Omit to return all statuses.
+      schema:
+        $ref: "#/components/schemas/SubmissionStatus"
   responses:
     BadRequest:
       description: The query, path parameter, JSON, or request body is invalid.
@@ -352,7 +550,7 @@ components:
               code: FORBIDDEN
               message: API key does not have the required permission.
     NotFound:
-      description: No promise exists with the supplied ID.
+      description: No resource exists with the supplied ID.
       headers:
         Cache-Control:
           $ref: "#/components/headers/NoStore"
@@ -360,10 +558,17 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
-          example:
-            error:
-              code: NOT_FOUND
-              message: Promise was not found.
+          examples:
+            promise:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Promise was not found.
+            submission:
+              value:
+                error:
+                  code: NOT_FOUND
+                  message: Submission was not found.
     UnsupportedMediaType:
       description: The request body is not JSON.
       headers:
@@ -409,6 +614,90 @@ components:
               code: INTERNAL_ERROR
               message: An unexpected error occurred.
   schemas:
+    SubmissionStatus:
+      type: string
+      enum: [pending, reviewed, rejected, accepted]
+    SubmissionClipUrl:
+      type: string
+      format: uri
+      maxLength: 2048
+      description: |
+        Trimmed HTTPS clip URL from Twitch, Kick, YouTube, Google Drive, or
+        Streamable, using the same validation as the public submission form.
+      pattern: '^https://'
+    SubmissionDescription:
+      type: string
+      minLength: 10
+      maxLength: 2000
+      description: Trimmed description of the promise in the clip.
+    Submission:
+      type: object
+      additionalProperties: false
+      required: [id, clipUrl, description, status, createdAt]
+      properties:
+        id:
+          type: string
+          pattern: "^[0-9a-fA-F]{24}$"
+          readOnly: true
+        clipUrl:
+          $ref: "#/components/schemas/SubmissionClipUrl"
+        description:
+          $ref: "#/components/schemas/SubmissionDescription"
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: Server-assigned creation time, returned as an ISO timestamp.
+      example:
+        id: 66a12f15f32e7a58d83b6f19
+        clipUrl: https://youtu.be/example
+        description: A promise to publish the annual report.
+        status: pending
+        createdAt: '2026-07-11T12:00:00.000Z'
+    SubmissionCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [clipUrl, description]
+      properties:
+        clipUrl:
+          $ref: "#/components/schemas/SubmissionClipUrl"
+        description:
+          $ref: "#/components/schemas/SubmissionDescription"
+        status:
+          allOf:
+            - $ref: "#/components/schemas/SubmissionStatus"
+          default: pending
+    SubmissionPatchRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        clipUrl:
+          $ref: "#/components/schemas/SubmissionClipUrl"
+        description:
+          $ref: "#/components/schemas/SubmissionDescription"
+        status:
+          $ref: "#/components/schemas/SubmissionStatus"
+    SubmissionResponse:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Submission"
+    SubmissionListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Submission"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     PromiseStatus:
       type: string
       enum:
@@ -632,7 +921,7 @@ components:
         totalCount:
           type: integer
           minimum: 0
-          description: Total number of promises. Present only when `page` is supplied.
+          description: Total number of resources matching the filters. Present only when `page` is supplied.
         totalPages:
           type: integer
           minimum: 1

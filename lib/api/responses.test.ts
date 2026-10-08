@@ -100,7 +100,7 @@ describe("API response helpers", () => {
     const response = internalApiError(failure);
 
     expect(consoleError).toHaveBeenCalledWith(
-      "Promises API request failed.",
+      "Management API request failed.",
       failure,
     );
     expect(response.status).toBe(500);

@@ -7,7 +7,7 @@ import {
 } from "@/lib/auth";
 import { apiError } from "@/lib/api/responses";
 
-type PromisePermission = "read" | "write";
+type ApiPermission = "read" | "write";
 
 export type ApiAuthenticationResult =
   | { authenticated: true; keyId: string }
@@ -15,7 +15,7 @@ export type ApiAuthenticationResult =
 
 export async function authenticateApiKey(
   request: Request,
-  permission: PromisePermission,
+  permission: ApiPermission,
 ): Promise<ApiAuthenticationResult> {
   const key = request.headers.get("x-api-key")?.trim();
   if (!key) {
