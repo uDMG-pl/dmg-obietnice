@@ -1,25 +1,12 @@
 import "server-only";
 
-import type { ZglosFormInput } from "@/app/_components/zglos-form/schema";
-import type { ZgloszenieInsert } from "@/lib/definitions";
-import { getMongoDb } from "@/lib/mongodb";
-
-const ZGLOSZENIA_COLLECTION = "zgloszenia";
+import { createSubmission } from "@/lib/submissions/repository";
+import type { SubmissionCreateInput } from "@/lib/submissions/schema";
 
 export async function createZgloszenie(
-  input: ZglosFormInput,
+  input: Omit<SubmissionCreateInput, "status">,
 ): Promise<string> {
-  const db = await getMongoDb();
-  const document: ZgloszenieInsert = {
-    clipUrl: input.clipUrl,
-    description: input.description,
-    status: "pending",
-    createdAt: new Date(),
-  };
+  const submission = await createSubmission({ ...input, status: "pending" });
 
-  const result = await db
-    .collection<ZgloszenieInsert>(ZGLOSZENIA_COLLECTION)
-    .insertOne(document);
-
-  return result.insertedId.toString();
+  return submission.id;
 }
